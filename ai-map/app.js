@@ -6,6 +6,9 @@ let nameToCode = {};
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Initialize map
+    if (map) {
+        map.remove();
+    }
     map = L.map('map').setView([20, 0], 2);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -157,98 +160,121 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             // Now attach the submit handler after everything is loaded
-            document.getElementById('submit').addEventListener('click', async function() {
-                const promptInput = document.getElementById('prompt');
-                const metricSelect = document.getElementById('metricSelect');
-                const prompt = metricSelect.value || promptInput.value;
-                const metric = parsePrompt(prompt);
-                if (!metric) {
-                    alert('Sorry, I couldn\'t understand the prompt. Try something like "richest countries", "most populated countries", "largest countries", "happiest countries", etc.');
-                    return;
+document.getElementById('submit').addEventListener('click', async function() {
+    const promptInput = document.getElementById('prompt');
+    const metricSelect = document.getElementById('metricSelect');
+    const prompt = metricSelect.value || promptInput.value;
+    const metric = parsePrompt(prompt);
+    if (!metric) {
+        alert('Sorry, I couldn\'t understand the prompt. Try something like "richest countries", "most populated countries", "largest countries", "happiest countries", etc.');
+        return;
+    }
+
+    // Show generating message and disable button
+    document.getElementById('status').innerText = 'Generating results...';
+    document.getElementById('submit').disabled = true;
+    document.getElementById('mesh').style.opacity = '0.3';
+
+    // Delay for 2.5 seconds
+    setTimeout(async () => {
+        // Check if we have data for this metric
+        let hasData = false;
+        for (const code in countryData) {
+            if (countryData[code][metric] != null) {
+                hasData = true;
+                break;
+            }
+        }
+
+        // If no data and it's a World Bank metric, fetch it
+        if (!hasData && indicatorMap[metric]) {
+            document.getElementById('status').innerText = 'Fetching data from World Bank...';
+            const wbData = await fetchWorldBankData(indicatorMap[metric]);
+            console.log('WB data keys:', Object.keys(wbData).length);
+            // Merge into countryData
+            for (const code in wbData) {
+                if (countryData[code]) {
+                    countryData[code][metric] = wbData[code];
                 }
+            }
+            hasData = Object.keys(wbData).length > 0;
+        }
 
-                // Show generating message and disable button
-                document.getElementById('status').innerText = 'Generating results...';
-                document.getElementById('submit').disabled = true;
-                document.getElementById('mesh').style.opacity = '0.3';
+        // Prepare values for color scaling
+        let valuesMap = {};
+        let values;
 
-                // Delay for 2.5 seconds
-                setTimeout(async () => {
-                    // Check if we have data for this metric
-                    let hasData = false;
-                    for (const code in countryData) {
-                        if (countryData[code][metric] != null) {
-                            hasData = true;
-                            break;
-                        }
-                    }
-
-                    // If no data and it's a World Bank metric, fetch it
-                    if (!hasData && indicatorMap[metric]) {
-                        document.getElementById('status').innerText = 'Fetching data from World Bank...';
-                        const wbData = await fetchWorldBankData(indicatorMap[metric]);
-                        console.log('WB data keys:', Object.keys(wbData).length);
-                        // Merge into countryData
-                        for (const code in wbData) {
-                            if (countryData[code]) {
-                                countryData[code][metric] = wbData[code];
-                            }
-                        }
-                        hasData = Object.keys(wbData).length > 0;
-                    }
-
-                    // Get values for the metric
-                    const values = Object.values(countryData).map(d => d[metric]).filter(v => v != null);
-                    console.log('Total values for metric:', values.length);
-                    if (values.length === 0) {
-                        alert(`No data available for ${metric}.`);
-                        document.getElementById('status').innerText = '';
-                        document.getElementById('submit').disabled = false;
-                        document.getElementById('mesh').style.opacity = '0';
-                        return;
-                    }
-                    const min = Math.min(...values);
-                    const max = Math.max(...values);
-
-                    // Update map colors
-                    console.log('Updating map for', metric, 'with', values.length, 'values');
-                    geojsonLayer.eachLayer(function(layer) {
-                        console.log('Properties:', layer.feature.properties);
-                        const name = layer.feature.properties.name;
-                        const code = nameToCode[name];
-                        const data = countryData[code];
-                        console.log('Processing', code, data ? data.name : 'no data');
-                        if (data && data[metric] != null) {
-                            const color = getColor(data[metric], metric, min, max);
-                            console.log('Setting color', color, 'for', data.name);
-                            layer.setStyle({
-                                fillColor: color,
-                                fillOpacity: 0.7
-                            });
-                        } else {
-                            layer.setStyle({
-                                fillColor: 'gray',
-                                fillOpacity: 0.7
-                            });
-                        }
-                    });
-                    map.invalidateSize();
-
-                    // Update legend
-                    const legendDiv = legend.getContainer();
-                    legendDiv.innerHTML = `
-                        <h4>${metric.replace('_', ' ').toUpperCase()} Legend</h4>
-                        <i style="background: rgb(139,0,0)"></i> Low (Red)<br>
-                        <i style="background: rgb(255,215,0)"></i> Medium (Gold)<br>
-                        <i style="background: rgb(0,128,0)"></i> High (Green)
-                    `;
-
-                    // Clear status and enable button
-                    document.getElementById('status').innerText = '';
-                    document.getElementById('submit').disabled = false;
-                    document.getElementById('mesh').style.opacity = '0';
-                }, 2500);
+        if (sillyMetrics.includes(metric)) {
+            // Generate silly metric values for all countries once
+            values = Object.keys(countryData).map(code => {
+                const val = generateSillyValue(code, metric);
+                valuesMap[code] = val;
+                return val;
             });
+        } else {
+            valuesMap = null; // Not needed for real metrics
+            values = Object.values(countryData).map(d => d[metric]).filter(v => v != null);
+        }
+
+        if (values.length === 0) {
+            alert(`No data available for ${metric}.`);
+            document.getElementById('status').innerText = '';
+            document.getElementById('submit').disabled = false;
+            document.getElementById('mesh').style.opacity = '0';
+            return;
+        }
+
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+
+        // Update map colors
+        console.log('Updating map for', metric, 'with', values.length, 'values');
+        geojsonLayer.eachLayer(function(layer) {
+            const name = layer.feature.properties.name;
+            const code = nameToCode[name];
+            const data = countryData[code];
+
+            let value;
+            if (sillyMetrics.includes(metric)) {
+                // Use precomputed value
+                value = valuesMap[code];
+            } else if (data && data[metric] != null) {
+                value = data[metric];
+            } else {
+                value = null;
+            }
+
+            if (value != null) {
+                const color = getColor(value, metric, min, max);
+                layer.setStyle({
+                    fillColor: color,
+                    fillOpacity: 0.7
+                });
+            } else {
+                layer.setStyle({
+                    fillColor: 'gray',
+                    fillOpacity: 0.7
+                });
+            }
+        });
+
+        map.invalidateSize();
+
+        // Update legend
+        const legendDiv = legend.getContainer();
+        legendDiv.innerHTML = `
+            <h4>${metric.replace('_', ' ').toUpperCase()} Legend</h4>
+            <i style="background: rgb(139,0,0)"></i> Low (Red)<br>
+            <i style="background: rgb(255,215,0)"></i> Medium (Gold)<br>
+            <i style="background: rgb(0,128,0)"></i> High (Green)
+        `;
+
+        // Clear status and enable button
+        document.getElementById('status').innerText = '';
+        document.getElementById('submit').disabled = false;
+        document.getElementById('mesh').style.opacity = '0';
+    }, 2500);
+});
         })
         .catch(error => {
             console.error('Error loading GeoJSON:', error);
