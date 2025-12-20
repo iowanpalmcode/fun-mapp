@@ -4,6 +4,12 @@ let legend;
 let countryData = {};
 let nameToCode = {};
 
+const rankingToggle = document.getElementById('rankingToggle');
+const rankingTable = document.getElementById('rankingTable');
+const rankingBody = document.getElementById('rankingBody');
+const rankingTitle = document.getElementById('rankingTitle');
+
+
 document.addEventListener('DOMContentLoaded', async function() {
     // Initialize map
     if (map) {
@@ -163,7 +169,16 @@ document.addEventListener('DOMContentLoaded', async function() {
 document.getElementById('submit').addEventListener('click', async function() {
     const promptInput = document.getElementById('prompt');
     const metricSelect = document.getElementById('metricSelect');
-    const prompt = metricSelect.value || promptInput.value;
+    let prompt;
+    const selectedMetric = metricSelect.value;
+    const typedPrompt = promptInput.value.trim();
+
+    if (selectedMetric) {
+        prompt = selectedMetric;
+    } else {
+        prompt = typedPrompt;
+    }
+
     const metric = parsePrompt(prompt);
     if (!metric) {
         alert('Sorry, I couldn\'t understand the prompt. Try something like "richest countries", "most populated countries", "largest countries", "happiest countries", etc.');
@@ -175,6 +190,7 @@ document.getElementById('submit').addEventListener('click', async function() {
     document.getElementById('submit').disabled = true;
     document.getElementById('mesh').style.opacity = '0.3';
 
+    metricSelect.value = "";
     // Delay for 2.5 seconds
     setTimeout(async () => {
         // Check if we have data for this metric
