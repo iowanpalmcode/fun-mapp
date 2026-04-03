@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="geoinsight-api-base" content="https://fun-mapp.onrender.com">
-    <title>fun mapp^2</title>
+    <title>FunMapp Atlas</title>
+    <link rel="icon" type="image/svg+xml" href="map-favicon.svg" />
     <link rel="stylesheet" href="leaflet.css?v=3" />
     <style>
         :root {
@@ -74,6 +75,19 @@
         .title {
             margin: 0;
             font-size: 1.22rem;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-logo {
+            width: 28px;
+            height: 28px;
+            display: block;
+            border-radius: 7px;
         }
 
         .composer {
@@ -537,7 +551,10 @@
         <aside class="panel chat-panel">
             <div class="chat-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h1 class="title">fun mapp^2</h1>
+                    <div class="brand-title">
+                        <img class="brand-logo" src="map-favicon.svg" alt="FunMapp Atlas logo">
+                        <h1 class="title">FunMapp Atlas</h1>
+                    </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span id="modeCaption" class="mode-caption">say cheese!</span>
                         <button id="themeToggle" class="theme-toggle" title="Toggle dark/light mode">🌙</button>

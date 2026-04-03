@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FunMapp Atlas logo">
+  <defs>
+    <linearGradient id="ocean" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#57c7ff" />
+      <stop offset="100%" stop-color="#1f6feb" />
+    </linearGradient>
+    <linearGradient id="pin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8f3f" />
+      <stop offset="100%" stop-color="#e55320" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#ocean)" />
+
+  <path d="M14 23 27 18 38 23 50 18v23l-12 5-11-5-13 5z" fill="#e8f5ff" opacity="0.95" />
+  <path d="M27 18v23M38 23v23" stroke="#9ccceb" stroke-width="2" fill="none" />
+
+  <path d="M32 14c-5.3 0-9.5 4.1-9.5 9.2 0 6.6 9.5 17.6 9.5 17.6s9.5-11 9.5-17.6c0-5.1-4.2-9.2-9.5-9.2z" fill="url(#pin)" />
+  <circle cx="32" cy="23" r="3.4" fill="#ffffff" />
+</svg>
