@@ -1757,7 +1757,7 @@ function getStats(rows) {
   };
 }
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:8000,http://127.0.0.1:8000")
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:8000,http://127.0.0.1:8000,https://fun-mapp.netlify.app")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);

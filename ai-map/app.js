@@ -309,10 +309,48 @@ function buildApiUrl(pathname) {
   return `${apiBase}${pathname}`;
 }
 
+function normalizeConfiguredApiBase(rawValue) {
+  let value = String(rawValue || "").trim();
+  if (!value) return "";
+
+  try {
+    value = decodeURIComponent(value);
+  } catch (_error) {
+    // Ignore decode errors and use the original string.
+  }
+
+  value = value.replace(/^['"]+|['"]+$/g, "");
+  value = value.split(/[\s"')]/)[0];
+  if (!value) return "";
+
+  if (!/^https?:\/\//i.test(value)) {
+    value = `https://${value}`;
+  }
+
+  try {
+    const parsed = new URL(value);
+    let pathname = parsed.pathname.replace(/\/+$/, "");
+    if (/\/health$/i.test(pathname)) {
+      pathname = pathname.replace(/\/health$/i, "");
+    }
+    return `${parsed.origin}${pathname}`;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function readConfiguredApiBase() {
+  const fromWindow = typeof window.GEOINSIGHT_API_BASE === "string" ? window.GEOINSIGHT_API_BASE.trim() : "";
+  const fromMeta = document.querySelector('meta[name="geoinsight-api-base"]')?.getAttribute("content")?.trim() || "";
+  const fromQuery = new URLSearchParams(window.location.search).get("api")?.trim() || "";
+  return normalizeConfiguredApiBase(fromQuery || fromWindow || fromMeta);
+}
+
 async function resolveApiBase() {
   const isHttp = window.location.protocol === "http:" || window.location.protocol === "https:";
   const sameOrigin = isHttp ? window.location.origin : "";
-  const candidates = [sameOrigin, "http://localhost:8000", "http://127.0.0.1:8000"]
+  const configuredApiBase = readConfiguredApiBase();
+  const candidates = [configuredApiBase, sameOrigin, "http://localhost:8000", "http://127.0.0.1:8000"]
     .filter(Boolean)
     .filter((value, index, arr) => arr.indexOf(value) === index);
 
@@ -591,7 +629,7 @@ async function initializeData() {
     setStatus("Ready. Ask a question to generate a world map.");
   } else {
     metricCatalog = fallbackMetrics;
-    setStatus("Map loaded, but API offline. Start backend: npm install ; npm start");
+    setStatus("Map loaded, but API offline. Set a hosted API URL with ?api=https://your-api-domain.com or meta[name=geoinsight-api-base].");
   }
 
   startPromptRotation();
