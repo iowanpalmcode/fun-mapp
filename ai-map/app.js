@@ -56,6 +56,7 @@ const rankingContextEl = document.getElementById("rankingContext");
 
 const countriesEndpoint = "https://raw.githubusercontent.com/mledoze/countries/master/countries.json";
 const geojsonEndpoint = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json";
+const defaultHostedApiBase = "https://fun-mapp.onrender.com";
 
 const fallbackMetrics = [
   { key: "gdp", label: "GDP", unit: "usd" },
@@ -343,7 +344,7 @@ function readConfiguredApiBase() {
   const fromWindow = typeof window.GEOINSIGHT_API_BASE === "string" ? window.GEOINSIGHT_API_BASE.trim() : "";
   const fromMeta = document.querySelector('meta[name="geoinsight-api-base"]')?.getAttribute("content")?.trim() || "";
   const fromQuery = new URLSearchParams(window.location.search).get("api")?.trim() || "";
-  return normalizeConfiguredApiBase(fromQuery || fromWindow || fromMeta);
+  return normalizeConfiguredApiBase(fromQuery || fromWindow || fromMeta || defaultHostedApiBase);
 }
 
 async function resolveApiBase() {
