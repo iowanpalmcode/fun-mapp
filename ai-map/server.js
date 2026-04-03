@@ -1773,9 +1773,21 @@ function isLoopbackOrigin(origin) {
   }
 }
 
+function isNetlifyOrigin(origin) {
+  if (!origin) return false;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== "https:") return false;
+    return parsed.hostname === "netlify.app" || parsed.hostname.endsWith(".netlify.app");
+  } catch (_error) {
+    return false;
+  }
+}
+
 function isOriginAllowed(origin) {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
+  if (isNetlifyOrigin(origin)) return true;
   return process.env.NODE_ENV !== "production" && isLoopbackOrigin(origin);
 }
 const rateLimitPerMinute = Number(process.env.RATE_LIMIT_PER_MINUTE || 60);
