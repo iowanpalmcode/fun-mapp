@@ -15,11 +15,16 @@ let selectedDataSource = "world-bank";
 let promptRotationTimer = null;
 let promptTypeTimer = null;
 let currentSuggestedPrompt = "";
+let importedCsvRows = [];
+let importedCsvLabel = "";
+let importedCsvUnit = "score";
 
 const statusEl = document.getElementById("status");
 const meshEl = document.getElementById("mesh");
 const submitButton = document.getElementById("submit");
 const promptInput = document.getElementById("prompt");
+const csvImportInput = document.getElementById("csvImportInput");
+const csvImportButton = document.getElementById("csvImportButton");
 const promptHintEl = document.getElementById("promptHint");
 const resultShellEl = document.getElementById("resultShell");
 const dataSourceToggle = document.getElementById("dataSourceToggle");
@@ -289,6 +294,104 @@ function parseMetricFromPrompt(text) {
   return null;
 }
 
+function normalizeCsvHeader(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function splitCsvLine(line) {
+  const cells = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      cells.push(cell.trim());
+      cell = "";
+      continue;
+    }
+
+    cell += char;
+  }
+
+  cells.push(cell.trim());
+  return cells;
+}
+
+function resolveCsvCountryCode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const upper = raw.toUpperCase();
+  if (/^[A-Z]{3}$/.test(upper) && countryData[upper]) {
+    return upper;
+  }
+
+  if (nameToCode[raw]) return nameToCode[raw];
+
+  const lowered = raw.toLowerCase();
+  const matchedKey = Object.keys(nameToCode).find((key) => key.toLowerCase() === lowered);
+  return matchedKey ? nameToCode[matchedKey] : "";
+}
+
+function parseCsvText(text) {
+  const cleaned = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const lines = cleaned.split("\n").filter((line) => line.trim().length > 0);
+  if (!lines.length) return [];
+
+  const table = lines.map(splitCsvLine);
+  const headers = table[0].map(normalizeCsvHeader);
+  const hasHeaderRow = headers.some((header) => ["country", "countrycode", "code", "cca3", "name", "value", "metric", "amount", "score", "data"].includes(header));
+  const startIndex = hasHeaderRow ? 1 : 0;
+  const countryCandidates = ["countrycode", "cca3", "iso3", "code", "country", "countryname", "name"];
+  const valueCandidates = ["value", "metric", "amount", "score", "data", "total", "index"];
+
+  let countryIndex = 0;
+  let valueIndex = 1;
+
+  if (hasHeaderRow) {
+    const countryMatch = headers.findIndex((header) => countryCandidates.includes(header));
+    const valueMatch = headers.findIndex((header) => valueCandidates.includes(header));
+    if (countryMatch >= 0) countryIndex = countryMatch;
+    if (valueMatch >= 0) valueIndex = valueMatch;
+  }
+
+  const rows = [];
+  const seen = new Set();
+
+  for (let rowIndex = startIndex; rowIndex < table.length; rowIndex += 1) {
+    const row = table[rowIndex];
+    if (!row || row.length <= Math.max(countryIndex, valueIndex)) continue;
+
+    const countryCode = resolveCsvCountryCode(row[countryIndex]);
+    const numericValue = Number(String(row[valueIndex] || "").replace(/[$,%\s,]/g, ""));
+    if (!countryCode || !Number.isFinite(numericValue) || seen.has(countryCode)) continue;
+
+    seen.add(countryCode);
+    rows.push({
+      countryCode,
+      country: countryData[countryCode] && countryData[countryCode].name ? countryData[countryCode].name : row[countryIndex],
+      value: numericValue
+    });
+  }
+
+  rows.sort((a, b) => b.value - a.value);
+  return rows;
+}
+
 async function fetchJsonSafe(url, options) {
   const response = await fetch(url, options);
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
@@ -402,7 +505,7 @@ function updateSummary(metric, rows, stats) {
   renderRanking();
 }
 
-async function hydrateMap(metricKey, queryMeta) {
+async function hydrateMap(metricKey, queryMeta, payloadOverride = null) {
   const metric = {
     key: metricKey,
     label: queryMeta.metricLabel || (metricByKey(metricKey) && metricByKey(metricKey).label) || metricKey,
@@ -418,9 +521,9 @@ async function hydrateMap(metricKey, queryMeta) {
     : "";
   const sourceParam = queryMeta.dataSource ? `&dataSource=${encodeURIComponent(queryMeta.dataSource)}` : "";
   const queryParam = queryMeta.query ? `&query=${encodeURIComponent(queryMeta.query)}` : "";
-  const payload = await fetchJsonSafe(buildApiUrl(`/data?metric=${encodeURIComponent(metricKey)}&limit=500${regionParam}${countriesParam}${sourceParam}${queryParam}`));
+  const payload = payloadOverride || await fetchJsonSafe(buildApiUrl(`/data?metric=${encodeURIComponent(metricKey)}&limit=500${regionParam}${countriesParam}${sourceParam}${queryParam}`));
 
-  const rows = payload.rows || [];
+  const rows = payload.rows || payload.topCountries || [];
   const valuesMap = new Map(rows.map((r) => [r.countryCode, Number(r.value)]));
   const scopeCountryCodes = Array.isArray(payload.focusCountryCodes) && payload.focusCountryCodes.length
     ? payload.focusCountryCodes
@@ -480,6 +583,8 @@ async function hydrateMap(metricKey, queryMeta) {
     sourceHtml += '<a href="https://data.worldbank.org" target="_blank" rel="noopener">World Bank</a>';
   } else if (queryMeta.dataSource === "ai-generated") {
     sourceHtml += "AI-generated";
+  } else if (queryMeta.dataSource === "csv") {
+    sourceHtml += "CSV import";
   }
   sourceHtml += " | <strong>Explanation:</strong> ";
   if (queryMeta.explanationSource === "ai") {
@@ -511,14 +616,109 @@ async function hydrateMap(metricKey, queryMeta) {
   }
 }
 
+function getRowsStats(rows) {
+  const values = (rows || [])
+    .map((row) => Number(row && row.value))
+    .filter((value) => Number.isFinite(value));
+
+  if (!values.length) return { count: 0, min: null, max: null };
+
+  return {
+    count: values.length,
+    min: Math.min(...values),
+    max: Math.max(...values)
+  };
+}
+
+function buildCsvPayload(queryLabel) {
+  const rows = Array.isArray(importedCsvRows) ? importedCsvRows : [];
+  const metricLabel = importedCsvLabel || queryLabel || "Imported CSV";
+  const unit = importedCsvUnit || "score";
+  const stats = getRowsStats(rows);
+
+  return {
+    query: queryLabel || metricLabel,
+    dataSource: "csv",
+    metric: "csv_import",
+    metricLabel,
+    metricUnit: unit,
+    metricInvertScale: false,
+    region: null,
+    regionLabel: "CSV import",
+    focusCountryCodes: rows.map((row) => row.countryCode),
+    visualizationType: "choropleth",
+    explanation: `Imported ${rows.length} rows from ${metricLabel}.`,
+    explanationSource: "fallback",
+    explanationReason: "local csv import",
+    explanationModel: null,
+    explanationUsage: null,
+    aiMeta: null,
+    stats,
+    rows,
+    topCountries: rows.slice(0, 10).map((row) => ({
+      ...row,
+      displayValue: window.formatMetricValue(row.value, unit)
+    }))
+  };
+}
+
 async function runQuery() {
   const query = promptInput.value.trim();
   selectedDataSource = dataSourceToggle ? dataSourceToggle.value : "world-bank";
+  const isCsvSource = selectedDataSource === "csv";
 
-  if (!query) {
+  if (!query && !isCsvSource) {
     setStatus("Enter a question to generate a map.");
     return;
   }
+
+  if (isCsvSource && (!Array.isArray(importedCsvRows) || !importedCsvRows.length)) {
+    setStatus("Choose a CSV file before using the CSV import option.");
+    return;
+  }
+
+  const effectiveQuery = query || importedCsvLabel || "Imported CSV";
+  promptInput.value = "";
+
+  if (isCsvSource) {
+    setBusy(true);
+    setStatus(apiAvailable ? "Importing CSV data..." : "Rendering CSV data...");
+
+    try {
+      if (apiAvailable) {
+        const queryMeta = await fetchJsonSafe(buildApiUrl("/query"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: effectiveQuery,
+            dataSource: "csv",
+            csvRows: importedCsvRows,
+            csvLabel: importedCsvLabel || effectiveQuery,
+            csvUnit: importedCsvUnit || "score"
+          })
+        });
+
+        await hydrateMap(queryMeta.metric, queryMeta, queryMeta);
+        setStatus(`Map ready: ${queryMeta.metricLabel}`);
+      } else {
+        const payload = buildCsvPayload(effectiveQuery);
+        await hydrateMap(payload.metric, payload, payload);
+        setStatus(`Map ready: ${payload.metricLabel}`);
+      }
+
+      resultShellEl.classList.add("visible");
+      setActiveView("map");
+      setTimeout(() => map.invalidateSize(), 80);
+    } catch (error) {
+      console.error(error);
+      setStatus("Failed to process CSV import.");
+    } finally {
+      setBusy(false);
+    }
+
+    return;
+  }
+
   promptInput.value = "";
 
   if (!apiAvailable) {
@@ -680,6 +880,59 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (infoToggle) {
     infoToggle.addEventListener("click", () => toggleInfoPanel());
   }
+
+  if (dataSourceToggle) {
+    dataSourceToggle.addEventListener("change", () => {
+      selectedDataSource = dataSourceToggle.value;
+
+      if (selectedDataSource === "csv") {
+        if (!Array.isArray(importedCsvRows) || !importedCsvRows.length) {
+          setStatus("Click Import CSV to choose a file with country and value columns.");
+        }
+      }
+    });
+  }
+
+  if (csvImportButton && csvImportInput) {
+    csvImportButton.addEventListener("click", () => {
+      csvImportInput.value = "";
+      csvImportInput.click();
+    });
+  }
+
+  if (csvImportInput) {
+    csvImportInput.addEventListener("change", async () => {
+      const file = csvImportInput.files && csvImportInput.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const rows = parseCsvText(text);
+
+        if (!rows.length) {
+          throw new Error("No country/value rows found.");
+        }
+
+        importedCsvRows = rows;
+        importedCsvLabel = file.name.replace(/\.[^.]+$/, "") || "Imported CSV";
+        importedCsvUnit = "score";
+        selectedDataSource = "csv";
+        if (dataSourceToggle) dataSourceToggle.value = "csv";
+        setStatus(`Imported ${rows.length} rows from ${file.name}. Click Send to render the map.`);
+      } catch (error) {
+        console.error(error);
+        importedCsvRows = [];
+        importedCsvLabel = "";
+        importedCsvUnit = "score";
+        if (dataSourceToggle) dataSourceToggle.value = "world-bank";
+        selectedDataSource = "world-bank";
+        setStatus("Could not read that CSV file. Use columns for country and value.");
+      } finally {
+        csvImportInput.value = "";
+      }
+    });
+  }
+
   viewButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);

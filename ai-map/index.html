@@ -573,12 +573,16 @@
                     <select id="dataSourceToggle" style="border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit;">
                         <option value="world-bank">World Bank</option>
                         <option value="ai-generated">AI Generated</option>
+                        <option value="csv">CSV Import</option>
                     </select>
+                    <button id="csvImportButton" class="info-toggle" type="button">Import CSV</button>
                     <button id="infoToggle" class="info-toggle" type="button" aria-expanded="false">Info</button>
                 </div>
+                <input id="csvImportInput" type="file" accept=".csv,text/csv" style="display: none;" />
                 <div id="infoPanel" class="info-panel" aria-live="polite">
                     <strong>World Bank</strong> uses published indicators like GDP, health, education, water, and climate data.
                     <strong>AI Generated</strong> blends those same real signals into proxy metrics when the exact question is unusual, so prompts like water balloons, golfers, beef consumption, or similar niche topics still return a plausible map instead of a random index.
+                    <strong>CSV Import</strong> lets you upload a file with a country column and a numeric value column, such as <code>country,value</code> or <code>countryCode,value</code>.
                 </div>
                 <div id="status" role="status" aria-live="polite"></div>
             </div>

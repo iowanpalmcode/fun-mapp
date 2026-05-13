@@ -645,6 +645,44 @@ function parseCountryCodesParam(raw) {
   return Array.from(new Set(parts));
 }
 
+function normalizeCsvRows(rawRows) {
+  if (!Array.isArray(rawRows)) return [];
+
+  const rows = [];
+  const seen = new Set();
+
+  rawRows.forEach((row) => {
+    if (!row || typeof row !== "object") return;
+
+    const rawCountryCode = sanitizeInput(
+      row.countryCode || row.code || row.cca3 || row.iso3 || row.iso3code || row.country_iso3 || ""
+    ).toUpperCase();
+    const rawCountryName = sanitizeInput(row.country || row.countryName || row.name || "");
+    const rawValue = row.value ?? row.metric ?? row.amount ?? row.score ?? row.data;
+    const numericValue = Number(String(rawValue ?? "").replace(/,/g, "").trim());
+
+    let countryCode = "";
+    if (rawCountryCode && countryNameByCode[rawCountryCode]) {
+      countryCode = rawCountryCode;
+    } else if (rawCountryName) {
+      const aliasKey = rawCountryName.toLowerCase();
+      countryCode = countryAliasToCode[aliasKey] || "";
+    }
+
+    if (!countryCode || !Number.isFinite(numericValue) || seen.has(countryCode)) return;
+    seen.add(countryCode);
+
+    rows.push({
+      countryCode,
+      country: countryNameByCode[countryCode] || rawCountryName || countryCode,
+      value: numericValue
+    });
+  });
+
+  rows.sort((a, b) => b.value - a.value);
+  return rows;
+}
+
 function extractCountryFocusCodes(query) {
   const normalized = sanitizeInput(query).toLowerCase();
   if (!normalized || !countryAliasEntries.length) return [];
@@ -1895,6 +1933,9 @@ app.post("/query", async (req, res) => {
   try {
     const raw = sanitizeInput(req.body && req.body.query);
     const dataSource = sanitizeInput(req.body && req.body.dataSource) || "world-bank";
+    const csvRows = Array.isArray(req.body && req.body.csvRows) ? req.body.csvRows : [];
+    const csvLabel = sanitizeInput(req.body && req.body.csvLabel);
+    const csvUnit = sanitizeInput(req.body && req.body.csvUnit) || "score";
     if (!raw) {
       return res.status(400).json({ error: "Query is required" });
     }
@@ -1911,6 +1952,48 @@ app.post("/query", async (req, res) => {
       if (inferredMetric && (!parsedMetricKey || String(inferredMetric.key).startsWith("ai_"))) {
         metricKey = inferredMetric.key;
       }
+    }
+
+    if (dataSource === "csv") {
+      const rows = normalizeCsvRows(csvRows);
+      if (!rows.length) {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      const metric = {
+        key: "csv_import",
+        label: csvLabel || raw || "Imported CSV",
+        unit: csvUnit || "score",
+        invertScale: false
+      };
+      const focusCountryCodes = rows.map((row) => row.countryCode);
+      const stats = getStats(rows);
+      const explanationResult = await generateAIExplanation(raw, metric, rows.slice(0, 10), "CSV import", focusCountryCodes);
+
+      return res.json({
+        query: raw,
+        dataSource,
+        metric: metric.key,
+        metricLabel: metric.label,
+        metricUnit: metric.unit,
+        metricInvertScale: false,
+        region: null,
+        regionLabel: "CSV import",
+        focusCountryCodes,
+        visualizationType: "choropleth",
+        explanation: explanationResult.text,
+        explanationSource: explanationResult.source,
+        explanationReason: explanationResult.reason,
+        explanationModel: explanationResult.model || null,
+        explanationUsage: explanationResult.usage || null,
+        aiMeta: null,
+        stats,
+        rows,
+        topCountries: rows.slice(0, 10).map((row) => ({
+          ...row,
+          displayValue: formatMetricValue(row.value, metric.unit)
+        }))
+      });
     }
     
     // Use selected data source
