@@ -25,11 +25,14 @@ const submitButton = document.getElementById("submit");
 const promptInput = document.getElementById("prompt");
 const csvImportInput = document.getElementById("csvImportInput");
 const csvImportButton = document.getElementById("csvImportButton");
+const csvExportButton = document.getElementById("csvExportButton");
 const promptHintEl = document.getElementById("promptHint");
 const resultShellEl = document.getElementById("resultShell");
 const dataSourceToggle = document.getElementById("dataSourceToggle");
 const infoToggle = document.getElementById("infoToggle");
 const infoPanel = document.getElementById("infoPanel");
+const termsButton = document.getElementById("termsButton");
+const termsPanel = document.getElementById("termsPanel");
 const viewButtons = Array.from(document.querySelectorAll(".view-btn"));
 const viewMap = {
   map: document.getElementById("mapView"),
@@ -138,6 +141,84 @@ function toggleInfoPanel(forceState = null) {
   const shouldShow = forceState == null ? !infoPanel.classList.contains("visible") : Boolean(forceState);
   infoPanel.classList.toggle("visible", shouldShow);
   infoToggle.setAttribute("aria-expanded", String(shouldShow));
+}
+
+function toggleTermsPanel(forceState = null) {
+  if (!termsButton || !termsPanel) return;
+  const shouldShow = forceState == null ? !termsPanel.classList.contains("visible") : Boolean(forceState);
+  termsPanel.classList.toggle("visible", shouldShow);
+  termsButton.setAttribute("aria-expanded", String(shouldShow));
+}
+
+function csvEscapeCell(value) {
+  const text = String(value == null ? "" : value);
+  if (!/[",\n]/.test(text)) return text;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function metricLabelForExport() {
+  return (lastMetric && lastMetric.label) || importedCsvLabel || "Metric";
+}
+
+function csvRowsForExport() {
+  if (!Array.isArray(lastRows) || !lastRows.length) return [];
+
+  return lastRows.map((row) => {
+    const countryCode = row.countryCode || resolveCsvCountryCode(row.country) || "";
+    return {
+      countryCode,
+      country: row.country || (countryData[countryCode] && countryData[countryCode].name) || "",
+      value: Number(row.value)
+    };
+  });
+}
+
+function updateCsvExportAvailability() {
+  if (!csvExportButton) return;
+  csvExportButton.disabled = !Array.isArray(lastRows) || !lastRows.length;
+}
+
+function exportCurrentRowsToCsv() {
+  const rows = csvRowsForExport();
+  if (!rows.length) {
+    setStatus("No mapped rows to export yet. Run a query first.");
+    updateCsvExportAvailability();
+    return;
+  }
+
+  const metricLabel = metricLabelForExport();
+  const unit = (lastMetric && lastMetric.unit) || importedCsvUnit || "score";
+  const source = selectedDataSource || "world-bank";
+  const header = ["countryCode", "country", "value", "metric", "unit", "source"];
+  const csvLines = [header.join(",")];
+
+  rows.forEach((row) => {
+    csvLines.push([
+      csvEscapeCell(row.countryCode),
+      csvEscapeCell(row.country),
+      csvEscapeCell(row.value),
+      csvEscapeCell(metricLabel),
+      csvEscapeCell(unit),
+      csvEscapeCell(source)
+    ].join(","));
+  });
+
+  const csv = `${csvLines.join("\n")}\n`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const objectUrl = URL.createObjectURL(blob);
+  const safeMetric = metricLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "metric";
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  const filename = `funmapp-${safeMetric}-${dateStamp}.csv`;
+
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+
+  setStatus(`Exported ${rows.length} rows to ${filename}.`);
 }
 
 function shuffleArray(values) {
@@ -444,8 +525,8 @@ function normalizeConfiguredApiBase(rawValue) {
 }
 
 function readConfiguredApiBase() {
-  const fromWindow = typeof window.GEOINSIGHT_API_BASE === "string" ? window.GEOINSIGHT_API_BASE.trim() : "";
-  const fromMeta = document.querySelector('meta[name="geoinsight-api-base"]')?.getAttribute("content")?.trim() || "";
+  const fromWindow = typeof window.EZMAP_API_BASE === "string" ? window.EZMAP_API_BASE.trim() : "";
+  const fromMeta = document.querySelector('meta[name="ezmap-api-base"]')?.getAttribute("content")?.trim() || "";
   const fromQuery = new URLSearchParams(window.location.search).get("api")?.trim() || "";
   return normalizeConfiguredApiBase(fromQuery || fromWindow || fromMeta || defaultHostedApiBase);
 }
@@ -497,6 +578,7 @@ function updateLegend(metric, min, max) {
 function updateSummary(metric, rows, stats) {
   lastMetric = metric;
   lastRows = rows;
+  updateCsvExportAvailability();
 
   metricNameEl.textContent = metric.label;
   countryCountEl.textContent = String(stats.count || 0);
@@ -830,7 +912,7 @@ async function initializeData() {
     setStatus("Ready. Ask a question to generate a world map.");
   } else {
     metricCatalog = fallbackMetrics;
-    setStatus("Map loaded, but API offline. Set a hosted API URL with ?api=https://your-api-domain.com or meta[name=geoinsight-api-base].");
+    setStatus("Map loaded, but API offline. Set a hosted API URL with ?api=https://your-api-domain.com or meta[name=ezmap-api-base].");
   }
 
   startPromptRotation();
@@ -881,6 +963,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     infoToggle.addEventListener("click", () => toggleInfoPanel());
   }
 
+  if (termsButton) {
+    termsButton.addEventListener("click", () => toggleTermsPanel());
+  }
+
   if (dataSourceToggle) {
     dataSourceToggle.addEventListener("change", () => {
       selectedDataSource = dataSourceToggle.value;
@@ -898,6 +984,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       csvImportInput.value = "";
       csvImportInput.click();
     });
+  }
+
+  if (csvExportButton) {
+    csvExportButton.addEventListener("click", exportCurrentRowsToCsv);
   }
 
   if (csvImportInput) {
@@ -924,6 +1014,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         importedCsvRows = [];
         importedCsvLabel = "";
         importedCsvUnit = "score";
+        lastRows = [];
+        updateCsvExportAvailability();
         if (dataSourceToggle) dataSourceToggle.value = "world-bank";
         selectedDataSource = "world-bank";
         setStatus("Could not read that CSV file. Use columns for country and value.");
@@ -948,4 +1040,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       runQuery();
     }
   });
+
+  updateCsvExportAvailability();
 });

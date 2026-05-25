@@ -1480,7 +1480,7 @@ async function generateAIExplanation(query, metric, topRows, regionLabel = null,
         messages: [
           {
             role: "system",
-            content: "You are GeoInsight AI. Return a detailed explanation in 4-6 sentences about causal factors only. Do NOT invent countries; only refer to countries provided in the input list. Keep scope strict to the provided region/countries. End with one caveat about data freshness/measurement differences."
+            content: "You are Ezmap AI. Return a detailed explanation in 4-6 sentences about causal factors only. Do NOT invent countries; only refer to countries provided in the input list. Keep scope strict to the provided region/countries. End with one caveat about data freshness/measurement differences."
           },
           {
             role: "user",
@@ -1878,7 +1878,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, service: "GeoInsight API" });
+  res.json({ ok: true, service: "Ezmap API" });
 });
 
 app.get("/metrics", (req, res) => {
@@ -2044,5 +2044,5 @@ app.get("*", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`GeoInsight server running on port ${PORT}`);
+  console.log(`Ezmap server running on port ${PORT}`);
 });

@@ -1,7 +1,7 @@
 {
-  "name": "geoinsight-ai",
+  "name": "ezmap-ai",
   "version": "1.0.0",
-  "description": "GeoInsight AI geospatial analytics MVP",
+  "description": "Ezmap AI geospatial analytics MVP",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
