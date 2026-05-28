@@ -428,6 +428,14 @@ function resolveCsvCountryCode(value) {
   return matchedKey ? nameToCode[matchedKey] : "";
 }
 
+function isCsvFile(file) {
+  if (!file) return false;
+
+  const name = String(file.name || "").toLowerCase();
+  const type = String(file.type || "").toLowerCase();
+  return name.endsWith(".csv") || type === "text/csv" || type === "application/vnd.ms-excel";
+}
+
 function parseCsvText(text) {
   const cleaned = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
   const lines = cleaned.split("\n").filter((line) => line.trim().length > 0);
@@ -994,6 +1002,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     csvImportInput.addEventListener("change", async () => {
       const file = csvImportInput.files && csvImportInput.files[0];
       if (!file) return;
+
+      if (!isCsvFile(file)) {
+        importedCsvRows = [];
+        importedCsvLabel = "";
+        importedCsvUnit = "score";
+        lastRows = [];
+        updateCsvExportAvailability();
+        if (dataSourceToggle) dataSourceToggle.value = "world-bank";
+        selectedDataSource = "world-bank";
+        setStatus("Please choose a .csv file before importing.");
+        csvImportInput.value = "";
+        return;
+      }
 
       try {
         const text = await file.text();
