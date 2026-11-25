@@ -1447,8 +1447,9 @@ async function getOpenRouterClient() {
 }
 
 async function generateAIExplanation(query, metric, topRows, regionLabel = null, focusCountryCodes = []) {
-  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
+  const model = "openrouter/free";
   const apiKey = process.env.OPENROUTER_API_KEY;
+  let routedModel = model;
   const regionHint = regionLabel ? `Region scope: ${regionLabel}` : "Region scope: Global";
   const scopeHint = focusCountryCodes.length
     ? `Country focus: ${focusCountryCodes.join(", ")}`
@@ -1494,6 +1495,9 @@ async function generateAIExplanation(query, metric, topRows, regionLabel = null,
     let text = "";
     let reasoningTokens = null;
     for await (const chunk of stream) {
+      if (typeof chunk.model === "string" && chunk.model.trim()) {
+        routedModel = chunk.model;
+      }
       const content = chunk && chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content;
       if (content) {
         text += content;
@@ -1509,7 +1513,7 @@ async function generateAIExplanation(query, metric, topRows, regionLabel = null,
         text: `${observedLead}\n\n${text.trim()}`,
         source: "ai",
         reason: null,
-        model,
+        model: routedModel,
         usage: {
           reasoningTokens
         }
@@ -1520,7 +1524,7 @@ async function generateAIExplanation(query, metric, topRows, regionLabel = null,
       text: buildFallbackExplanation(query, metric, topRows, regionLabel),
       source: "fallback",
       reason: "empty_ai_response",
-      model
+      model: routedModel
     };
   } catch (error) {
     const status = error && (error.status || error.statusCode || (error.response && error.response.status));
@@ -1539,7 +1543,7 @@ async function generateAIExplanation(query, metric, topRows, regionLabel = null,
       text: buildFallbackExplanation(query, metric, topRows, regionLabel),
       source: "fallback",
       reason,
-      model
+      model: routedModel
     };
   }
 }
