@@ -5,35 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="infomapic-api-base" content="https://fun-mapp.onrender.com">
     <title>InfoMapic</title>
-    <link rel="icon" type="image/svg+xml" href="map-favicon.svg" />
+    <link rel="icon" type="image/png" sizes="256x256" href="map-favicon.png?v=1" />
     <link rel="stylesheet" href="leaflet.css?v=3" />
     <style>
         :root {
-            --bg: #eef2f6;
-            --panel: #ffffff;
-            --panel-soft: #f8fbfa;
-            --ink: #1a2433;
-            --muted: #627287;
-            --line: #d8e0ea;
-            --accent: #1f6feb;
-            --accent-soft: #e9f1ff;
-            --ok: #118251;
-            --mid: #f8b500;
-            --low: #bf211e;
+            --bg: #e4e3f0;
+            --panel: #f8f7fb;
+            --panel-soft: #eae8f3;
+            --ink: #2c293a;
+            --muted: #6f6b80;
+            --line: #d3d0e2;
+            --accent: #a55338;
+            --accent-soft: #f2e1da;
+            --ok: #427e70;
+            --mid: #b9783f;
+            --low: #a34837;
         }
 
         body.dark-mode {
-            --bg: #0d1117;
-            --panel: #161b22;
-            --panel-soft: #1c2430;
-            --ink: #e6edf3;
-            --muted: #8b949e;
-            --line: #30363d;
-            --accent: #1f6feb;
-            --accent-soft: #0d1f3c;
-            --ok: #238636;
-            --mid: #d29922;
-            --low: #da3633;
+            --bg: #191925;
+            --panel: #242438;
+            --panel-soft: #303049;
+            --ink: #f2eff5;
+            --muted: #aaa7bc;
+            --line: #43435c;
+            --accent: #d98b6d;
+            --accent-soft: #49332f;
+            --ok: #82b8a1;
+            --mid: #d6a461;
+            --low: #ef947c;
         }
 
         * {
@@ -417,8 +417,8 @@
             opacity: 0;
             transition: opacity 0.25s ease;
             background:
-                linear-gradient(rgba(19, 37, 32, 0.12) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(19, 37, 32, 0.12) 1px, transparent 1px);
+                linear-gradient(rgba(76, 69, 114, 0.12) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(76, 69, 114, 0.12) 1px, transparent 1px);
             background-size: 32px 32px;
         }
 
@@ -439,8 +439,8 @@
             display: inline-block;
             width: 12px;
             height: 12px;
-            border: 2px solid rgba(31, 111, 235, 0.2);
-            border-top-color: #1f6feb;
+            border: 2px solid color-mix(in srgb, var(--accent) 22%, transparent);
+            border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             margin-right: 6px;
@@ -571,16 +571,486 @@
             background: var(--accent-soft);
         }
 
+        body {
+            font-family: "Aptos", "Segoe UI", sans-serif;
+            background: var(--bg);
+        }
+
+        .chat-layout {
+            grid-template-columns: minmax(284px, 330px) minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
+            gap: 14px;
+            height: 100vh;
+            height: 100dvh;
+            padding: 14px;
+        }
+
+        .panel {
+            border-radius: 8px;
+            box-shadow: none;
+        }
+
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .chat-header {
+            padding: 22px 20px 0;
+        }
+
+        .brand-title {
+            gap: 11px;
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+        }
+
+        .title {
+            font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+            font-size: 1.65rem;
+            font-weight: 600;
+            letter-spacing: -0.035em;
+        }
+
+        .brand-note {
+            max-width: 24ch;
+            margin: 14px 0 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .composer {
+            align-content: start;
+            gap: 14px;
+            padding: 24px 20px 20px;
+        }
+
+        .composer-row {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 9px;
+        }
+
+        input,
+        button,
+        select,
+        .view-btn {
+            border-radius: 6px;
+        }
+
+        input {
+            min-height: 46px;
+            background: var(--panel-soft);
+        }
+
+        input:focus-visible,
+        select:focus-visible,
+        button:focus-visible,
+        .view-btn:focus-visible,
+        a:focus-visible {
+            outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+            outline-offset: 2px;
+        }
+
+        button {
+            min-height: 44px;
+        }
+
+        #submit {
+            width: 100%;
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--panel);
+        }
+
+        body.dark-mode #submit {
+            color: #17211d;
+        }
+
+        .source-row {
+            gap: 8px;
+            font-size: 0.82rem;
+        }
+
+        #dataSourceToggle {
+            min-height: 38px;
+            flex: 1;
+            padding: 7px 9px;
+        }
+
+        .info-toggle {
+            min-height: 36px;
+            padding: 6px 9px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .info-panel {
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.84rem;
+        }
+
+        #status {
+            min-height: 18px;
+            line-height: 1.4;
+        }
+
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            min-height: 36px;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .result-panel {
+            grid-template-rows: auto minmax(0, 1fr);
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .result-toolbar {
+            gap: 6px;
+            padding: 12px 16px;
+        }
+
+        .view-btn {
+            min-height: 38px;
+            padding: 8px 14px;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .view-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--panel);
+        }
+
+        body.dark-mode .view-btn.active {
+            color: #17211d;
+        }
+
+        .summary-disclaimer {
+            margin-left: auto;
+            border-radius: 5px;
+            font-size: 0.76rem;
+            font-weight: 500;
+        }
+
+        .view-content {
+            padding: 14px;
+        }
+
+        #mapView .view-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .map-shell {
+            flex: 1;
+            min-height: 460px;
+            border: 0;
+            border-radius: 6px;
+            background: #d8d8eb;
+        }
+
+        body.dark-mode .map-shell {
+            background: #222238;
+        }
+
+        #map {
+            min-height: 460px;
+        }
+
+        .placeholder-container {
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background-color: #e3e2f0;
+            background-image:
+                radial-gradient(ellipse at 50% 50%, transparent 0 36%, rgba(87, 79, 139, 0.1) 36.2% 36.5%, transparent 36.7% 48%, rgba(87, 79, 139, 0.08) 48.2% 48.5%, transparent 48.7%),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 58%);
+        }
+
+        body.dark-mode .placeholder-container {
+            background-color: #222238;
+            background-image:
+                radial-gradient(ellipse at 50% 50%, transparent 0 36%, rgba(217, 139, 109, 0.12) 36.2% 36.5%, transparent 36.7% 48%, rgba(217, 139, 109, 0.1) 48.2% 48.5%, transparent 48.7%);
+        }
+
+        .placeholder-icon {
+            width: 58px;
+            height: 58px;
+            border: 1px solid var(--line);
+            border-radius: 50%;
+            color: var(--accent);
+            box-shadow: none;
+        }
+
+        .placeholder-text {
+            max-width: 34ch;
+            color: var(--ink);
+            font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+            font-size: 1.25rem;
+        }
+
+        .map-legal {
+            flex: 0 0 auto;
+            margin-top: 0;
+            padding: 9px 2px 0;
+            border: 0;
+            border-top: 1px solid var(--line);
+            border-radius: 0;
+            background: transparent;
+        }
+
+        .map-legal p {
+            font-size: 0.78rem;
+        }
+
+        .terms-panel,
+        .explanation,
+        .stat-card {
+            border-radius: 6px;
+            box-shadow: none;
+        }
+
+        .summary-grid {
+            gap: 8px;
+        }
+
+        .stat-card {
+            padding: 12px;
+        }
+
+        .stat-label {
+            letter-spacing: 0.04em;
+        }
+
+        .stat-value {
+            font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+            font-size: 1.2rem;
+        }
+
+        .ranking-controls select {
+            min-height: 36px;
+        }
+
+        #rankingTable th {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .legend {
+            border-radius: 5px;
+            box-shadow: none;
+        }
+
+        body.dark-mode .legend {
+            background: var(--panel);
+            color: var(--ink);
+        }
+
+        .theme-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            min-height: 36px;
+        }
+
+        .theme-toggle {
+            flex: 0 0 36px;
+            min-width: 36px;
+            line-height: 1;
+        }
+
+        .mode-caption {
+            display: inline-flex;
+            align-items: center;
+            height: 36px;
+            line-height: 1;
+            transform: none;
+        }
+
+        .mode-caption.visible {
+            transform: none;
+        }
+
+        .source-controls {
+            position: relative;
+            z-index: 10;
+        }
+
+        .info-panel.visible {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            left: 0;
+            z-index: 20;
+            max-height: min(42vh, 300px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            box-shadow: 0 12px 28px rgba(44, 41, 58, 0.16);
+        }
+
+        #rankingTitle,
+        #summaryContent .explanation h3 {
+            position: relative;
+            padding-left: 12px;
+        }
+
+        #rankingTitle::before,
+        #summaryContent .explanation h3::before {
+            position: absolute;
+            top: 0.1em;
+            bottom: 0.1em;
+            left: 0;
+            width: 4px;
+            border-radius: 4px;
+            background: var(--accent);
+            content: "";
+        }
+
+        #rankingTable tbody tr:nth-child(even) {
+            background: color-mix(in srgb, var(--accent-soft) 26%, var(--panel));
+        }
+
+        #rankingTable tbody tr:hover {
+            background: var(--accent-soft);
+        }
+
+        #rankingTable tbody td:first-child {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        #summaryContent .stat-card {
+            border-top: 3px solid var(--accent);
+            background: color-mix(in srgb, var(--accent-soft) 28%, var(--panel));
+        }
+
+        #summaryContent .stat-card:nth-child(even) {
+            border-top-color: #7776ad;
+        }
+
+        body.dark-mode #summaryContent .stat-card:nth-child(even) {
+            border-top-color: #aaa4df;
+        }
+
+        #summaryContent .explanation h3 {
+            color: var(--accent);
+        }
+
         @media (max-width: 1000px) {
             .chat-layout {
-                grid-template-rows: auto 1fr;
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-rows: auto minmax(68vh, 1fr);
                 height: auto;
                 min-height: 100vh;
+                min-height: 100dvh;
             }
-            #map {
+
+            .chat-panel {
+                overflow: visible;
+            }
+
+            .chat-header {
+                padding: 16px 18px 0;
+            }
+
+            .brand-note {
+                margin-top: 8px;
+            }
+
+            .composer {
+                gap: 10px;
+                padding: 16px 18px;
+            }
+
+            .composer-row {
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+
+            #submit {
+                width: auto;
+                min-width: 94px;
+            }
+
+            .result-panel {
+                min-height: 70vh;
+            }
+
+            #map,
+            .map-shell {
                 min-height: 58vh;
             }
         }
+
+        @media (max-width: 620px) {
+            .chat-layout {
+                gap: 10px;
+                padding: 10px;
+                grid-template-rows: auto minmax(64vh, 1fr);
+            }
+
+            .result-toolbar {
+                padding: 10px;
+            }
+
+            .view-btn {
+                padding: 7px 10px;
+            }
+
+            .summary-disclaimer {
+                width: 100%;
+                margin-left: 0;
+                line-height: 1.4;
+            }
+
+            .view-content {
+                padding: 10px;
+            }
+
+            #map,
+            .map-shell {
+                min-height: 54vh;
+            }
+
+            .map-legal {
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .info-panel.visible {
+                top: auto;
+                bottom: calc(100% + 8px);
+                max-height: min(38vh, 180px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -589,39 +1059,42 @@
             <div class="chat-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="brand-title">
-                        <img class="brand-logo" src="map-favicon.svg" alt="InfoMapic logo">
+                        <img class="brand-logo" src="map-favicon.png?v=1" alt="InfoMapic logo">
                         <h1 class="title">InfoMapic</h1>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="theme-controls">
                         <span id="modeCaption" class="mode-caption">say cheese!</span>
                         <button id="themeToggle" class="theme-toggle" title="Toggle dark/light mode">🌙</button>
                     </div>
                 </div>
+                <p class="brand-note">Your handy data visualizer!</p>
             </div>
 
             <div class="composer">
                 <div class="composer-row">
-                    <input type="text" id="prompt" placeholder="Ask anything like: life expectancy worldwide, happiest countries, or internet access in africa" />
-                    <button id="submit" type="button">Send</button>
+                    <input type="text" id="prompt" aria-label="Ask about a place or statistic" placeholder="e.g. life expectancy in Europe" />
+                    <button id="submit" type="button">Map it</button>
                 </div>
                 <div id="promptHint" class="prompt-hint" aria-live="polite"></div>
-                <div class="source-row">
-                    <label for="dataSourceToggle" style="color: var(--muted); font-weight: 500;">Data:</label>
-                    <select id="dataSourceToggle" style="border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit;">
-                        <option value="world-bank">World Bank</option>
-                        <option value="ai-generated">AI Generated</option>
-                        <option value="csv">CSV Import</option>
-                    </select>
-                    <button id="csvImportButton" class="info-toggle" type="button">Import CSV</button>
-                    <button id="csvExportButton" class="info-toggle" type="button" disabled>Export CSV</button>
-                    <button id="infoToggle" class="info-toggle" type="button" aria-expanded="false">Info</button>
-                </div>
-                <input id="csvImportInput" type="file" accept=".csv,text/csv" style="display: none;" />
-                <div id="infoPanel" class="info-panel" aria-live="polite">
-                    <strong>World Bank</strong> uses published indicators like GDP, health, education, water, and climate data.
-                    <strong>AI Generated</strong> blends those same real signals into proxy metrics when the exact question is unusual, so prompts like water balloons, golfers, beef consumption, or similar niche topics still return a plausible map instead of a random index.
-                    <strong>CSV Import</strong> lets you upload a file with a country column and a numeric value column, such as <code>country,value</code> or <code>countryCode,value</code>.
-                    <strong>CSV Export</strong> allows you to download the current map data as a CSV file.
+                <div class="source-controls">
+                    <div class="source-row">
+                        <label for="dataSourceToggle" style="color: var(--muted); font-weight: 500;">Data:</label>
+                        <select id="dataSourceToggle" style="border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit;">
+                            <option value="world-bank">World Bank</option>
+                            <option value="ai-generated">AI Generated</option>
+                            <option value="csv">CSV Import</option>
+                        </select>
+                        <button id="csvImportButton" class="info-toggle" type="button">Import CSV</button>
+                        <button id="csvExportButton" class="info-toggle" type="button" disabled>Export CSV</button>
+                        <button id="infoToggle" class="info-toggle" type="button" aria-expanded="false">Info</button>
+                    </div>
+                    <input id="csvImportInput" type="file" accept=".csv,text/csv" style="display: none;" />
+                    <div id="infoPanel" class="info-panel" aria-live="polite">
+                        <strong>World Bank</strong> uses published indicators like GDP, health, education, water, and climate data.
+                        <strong>AI Generated</strong> blends those same real signals into proxy metrics when the exact question is unusual, so prompts like water balloons, golfers, beef consumption, or similar niche topics still return a plausible map instead of a random index.
+                        <strong>CSV Import</strong> lets you upload a file with a country column and a numeric value column, such as <code>country,value</code> or <code>countryCode,value</code>.
+                        <strong>CSV Export</strong> allows you to download the current map data as a CSV file.
+                    </div>
                 </div>
                 <div id="status" role="status" aria-live="polite"></div>
             </div>
@@ -643,7 +1116,7 @@
                         <div class="map-shell" id="mapShell">
                             <div id="mapPlaceholder" class="placeholder-container">
                                 <div class="placeholder-icon">🗺️</div>
-                                <div class="placeholder-text">Submit a query to generate a map</div>
+                                <div class="placeholder-text">Ask a question to plot your first map</div>
                             </div>
                             <div id="map" style="display: none;"></div>
                             <div id="mesh"></div>
